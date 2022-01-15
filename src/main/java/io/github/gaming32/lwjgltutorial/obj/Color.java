@@ -2,40 +2,26 @@ package io.github.gaming32.lwjgltutorial.obj;
 
 import java.nio.FloatBuffer;
 
-public final class Color implements FloatBufferable {
-    public static final Color BLACK = new Color(0, 0, 0);
-    public static final Color WHITE = new Color(1, 1, 1);
-    public static final Color RED   = new Color(1, 0, 0);
-    public static final Color GREEN = new Color(0, 1, 0);
-    public static final Color BLUE  = new Color(0, 0, 1);
+import io.github.gaming32.lwjgltutorial.obj.immutable.ImmutableColor;
 
-    private final float r, g, b;
+public interface Color extends FloatBufferable {
+    public static final Color BLACK = new ImmutableColor(0, 0, 0);
+    public static final Color WHITE = new ImmutableColor(1, 1, 1);
+    public static final Color RED   = new ImmutableColor(1, 0, 0);
+    public static final Color GREEN = new ImmutableColor(0, 1, 0);
+    public static final Color BLUE  = new ImmutableColor(0, 0, 1);
 
-    public Color(float r, float g, float b) {
-        this.r = r;
-        this.g = g;
-        this.b = b;
-    }
+    public float getR();
+    public float getG();
+    public float getB();
 
-    public float getR() {
-        return r;
-    }
-
-    public float getG() {
-        return g;
-    }
-
-    public float getB() {
-        return b;
+    @Override
+    default public FloatBuffer getInto(FloatBuffer buffer) {
+        return buffer.put(getR()).put(getG()).put(getB());
     }
 
     @Override
-    public FloatBuffer getInto(FloatBuffer buffer) {
-        return buffer.put(r).put(g).put(b);
-    }
-
-    @Override
-    public String toString() {
-        return "Color[r=" + r + ", g=" + g + ", b=" + b + "]";
+    default public int bufferLength() {
+        return 3;
     }
 }

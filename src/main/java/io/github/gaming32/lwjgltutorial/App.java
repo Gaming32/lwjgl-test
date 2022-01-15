@@ -8,6 +8,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_W;
 import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_CORE_PROFILE;
 import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_FORWARD_COMPAT;
@@ -92,7 +93,7 @@ import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
-import io.github.gaming32.lwjgltutorial.obj.ImmutableObjModel;
+import io.github.gaming32.lwjgltutorial.obj.immutable.ImmutableObjModel;
 
 public class App {
     private static final int FLOAT_SIZE = 4;
@@ -105,6 +106,8 @@ public class App {
 
     private static final float MOVE_SPEED = 6;
     private static final float TURN_SPEED = 0.5f;
+    private static final float GRAVITY = -1f;
+    private static final float JUMP_SPEED = 15;
 
     private long window;
     private int shaderProgram;
@@ -146,18 +149,7 @@ public class App {
 
         int vbo;
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            FloatBuffer vertices = stack.mallocFloat(6 * 6);
-            // // First triangle
-            // vertices.put(-0.5f).put(-0.5f).put(0f).put(1f).put(0f).put(0f);
-            // vertices.put(-0.5f).put(0.5f).put(0f).put(1f).put(0f).put(0f);
-            // vertices.put(0.5f).put(-0.5f).put(0f).put(1f).put(0f).put(0f);
-            // // Second triangle
-            // vertices.put(-0.5f).put(0.5f).put(0f).put(0f).put(0f).put(1f);
-            // vertices.put(0.5f).put(0.5f).put(0f).put(0f).put(0f).put(1f);
-            // vertices.put(0.5f).put(-0.5f).put(0f).put(0f).put(0f).put(1f);
-            // // vertices.put(-0.6f).put(-0.4f).put(0f).put(1f).put(0f).put(0f);
-            // // vertices.put(0.6f).put(-0.4f).put(0f).put(0f).put(1f).put(0f);
-            // // vertices.put(0f).put(0.6f).put(0f).put(0f).put(0f).put(1f);
+            FloatBuffer vertices = stack.mallocFloat(model.bufferLength());
             model.getInto(vertices);
             vertices.flip();
 
@@ -215,7 +207,7 @@ public class App {
         Vector2f rotation = new Vector2f();
 
         Vector3f velocity = new Vector3f();
-        Vector3f position = new Vector3f(0, -1.8f, -5);
+        Vector3f position = new Vector3f(0, 0, -5);
         glfwSetKeyCallback(window, (window2, key, scancode, action, mods) -> {
             if (action == GLFW_PRESS) {
                 if (key == GLFW_KEY_W) {
@@ -226,6 +218,8 @@ public class App {
                     velocity.x = MOVE_SPEED;
                 } else if (key == GLFW_KEY_D) {
                     velocity.x = -MOVE_SPEED;
+                } else if (key == GLFW_KEY_SPACE) {
+                    velocity.y = JUMP_SPEED;
                 }
             } else if (action == GLFW_RELEASE) {
                 if (key == GLFW_KEY_W || key == GLFW_KEY_S) {
@@ -252,23 +246,28 @@ public class App {
             mousePos.set(screenSize.x / 2, screenSize.y / 2);
 
             rotation.x += (float)(relMousePos.y * delta * TURN_SPEED);
-            rotation.y += (float)(relMousePos.x * delta * TURN_SPEED);
+            rotation.y -= (float)(relMousePos.x * delta * TURN_SPEED);
             if (rotation.x > DEGREES_90) {
                 rotation.x = DEGREES_90;
             } else if (rotation.x < -DEGREES_90) {
                 rotation.x = -DEGREES_90;
             }
+            velocity.y += GRAVITY;
             position.add(
                 new Vector3f()
                     .set(velocity)
-                    .rotateY(-rotation.y)
+                    .rotateY(rotation.y)
                     .mul((float)delta)
             );
+            if (position.y < 0) {
+                position.y = 0;
+                velocity.y = 0;
+            }
 
             viewMatrix.set(IDENTITY_MATRIX);
             viewMatrix.rotateX(rotation.x);
-            viewMatrix.rotateY(rotation.y);
-            viewMatrix.translate(position);
+            viewMatrix.rotateY(-rotation.y);
+            viewMatrix.translate(position.x, -position.y - 1.8f, position.z);
             // System.out.println(position);
             // viewMatrix.rotateLocalX((float)(relMousePos.y * delta * TURN_SPEED));
             // viewMatrix.rotateLocalY((float)(relMousePos.x * delta * TURN_SPEED));
