@@ -6,7 +6,7 @@ jobs:
     strategy:
       matrix:
         java: [8, 11, 17]
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     if: github.ref != 'refs/heads/gh-pages'
     steps:
