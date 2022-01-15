@@ -15,6 +15,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_FORWARD_COMPAT;
 import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_PROFILE;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
+import static org.lwjgl.glfw.GLFW.GLFW_SAMPLES;
 import static org.lwjgl.glfw.GLFW.GLFW_TRUE;
 import static org.lwjgl.glfw.GLFW.glfwCreateWindow;
 import static org.lwjgl.glfw.GLFW.glfwDefaultWindowHints;
@@ -45,6 +46,7 @@ import static org.lwjgl.opengl.GL11.glDepthMask;
 import static org.lwjgl.opengl.GL11.glDrawArrays;
 import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL11.glViewport;
+import static org.lwjgl.opengl.GL13.GL_MULTISAMPLE;
 import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
 import static org.lwjgl.opengl.GL15.GL_STATIC_DRAW;
 import static org.lwjgl.opengl.GL15.glBindBuffer;
@@ -134,6 +136,7 @@ public class App {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+        glfwWindowHint(GLFW_SAMPLES, 4);
 
         window = glfwCreateWindow(640, 480, "LWJGL Tutorial", NULL, NULL);
         if (window == NULL) {
@@ -233,6 +236,7 @@ public class App {
         });
 
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glEnable(GL_MULTISAMPLE);
 
         double lastTime = glfwGetTime();
         while (!glfwWindowShouldClose(window)) {
@@ -282,15 +286,21 @@ public class App {
             // Start rendering
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+            glUniformMatrix4fv(uniProjection, false, mainProjectionBuffer);
+
+            // glDepthMask(false);
+            // glDisable(GL_DEPTH_TEST);
+
+            glDepthMask(true);
+            glEnable(GL_DEPTH_TEST);
+
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
             // glUniformMatrix4fv(uniProjection, false, hudProjectionBuffer);
             // glDepthMask(false);
             // glDisable(GL_DEPTH_TEST);
             // Draw HUD
-            glUniformMatrix4fv(uniProjection, false, mainProjectionBuffer);
-            glDepthMask(true);
-            glEnable(GL_DEPTH_TEST);
+
 
             glfwSwapBuffers(window);
             glfwPollEvents();
