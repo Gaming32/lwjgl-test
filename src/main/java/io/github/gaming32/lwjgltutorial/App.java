@@ -98,7 +98,7 @@ public class App {
                                DEGREES_360 = FLOAT_PI * 2;
 
     private static final float MOVE_SPEED = 6;
-    private static final float TURN_SPEED = 1;
+    private static final float TURN_SPEED = 0.5f;
 
     private long window;
     private int shaderProgram;
