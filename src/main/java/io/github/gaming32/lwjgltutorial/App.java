@@ -34,11 +34,15 @@ import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.glfw.GLFW.glfwWindowHint;
 import static org.lwjgl.glfw.GLFW.glfwWindowShouldClose;
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
 import static org.lwjgl.opengl.GL11.GL_FLOAT;
 import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
 import static org.lwjgl.opengl.GL11.GL_TRUE;
 import static org.lwjgl.opengl.GL11.glClear;
+import static org.lwjgl.opengl.GL11.glDepthMask;
 import static org.lwjgl.opengl.GL11.glDrawArrays;
+import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL11.glViewport;
 import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
 import static org.lwjgl.opengl.GL15.GL_STATIC_DRAW;
@@ -88,6 +92,8 @@ import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
+import io.github.gaming32.lwjgltutorial.obj.ImmutableObjModel;
+
 public class App {
     private static final int FLOAT_SIZE = 4;
     private static final Matrix4f IDENTITY_MATRIX = new Matrix4f();
@@ -105,6 +111,9 @@ public class App {
     private Vector2i screenSize;
     private GLFWErrorCallback errorCallback = GLFWErrorCallback.createPrint(System.err);
     private final ImmutableObjModel model;
+
+    private FloatBuffer mainProjectionBuffer;
+    private FloatBuffer hudProjectionBuffer;
 
     private App() throws IOException {
         model = ImmutableObjModel.parse(getClass().getResourceAsStream("/model.obj"));
@@ -158,7 +167,7 @@ public class App {
         }
 
         int vertexShader = getShader(GL_VERTEX_SHADER, "/shader.vert");
-        int fragmentShader = getShader(GL_FRAGMENT_SHADER, "/shader.frag");
+        int fragmentShader = getShader(GL_FRAGMENT_SHADER, "/vertexcolor.frag");
 
         shaderProgram = glCreateProgram();
         glAttachShader(shaderProgram, vertexShader);
@@ -192,6 +201,10 @@ public class App {
         viewMatrix.translate(0, 0, -5);
         viewMatrix.get(viewMatrixBuffer);
         glUniformMatrix4fv(uniView, false, viewMatrixBuffer);
+
+        int uniProjection = glGetUniformLocation(shaderProgram, "projection");
+        mainProjectionBuffer = MemoryUtil.memAllocFloat(16);
+        hudProjectionBuffer = MemoryUtil.memAllocFloat(16);
 
         glfwSetWindowSizeCallback(window, (window2, width, height) -> {
             resizeView(width, height);
@@ -232,7 +245,7 @@ public class App {
             double time = glfwGetTime();
             double delta = time - lastTime;
             lastTime = time;
-            // System.out.print(time + "\r");
+            // System.out.print(1 / delta + " FPS                      \r");
 
             Vector2d relMousePos = getMousePos().sub(mousePos);
             glfwSetCursorPos(window, screenSize.x / 2, screenSize.y / 2);
@@ -265,10 +278,21 @@ public class App {
 
             // model.rotate((float)(delta * Math.PI * 0.25), 0, 0, 1);
             // model.get(modelBuffer);
-            glUniformMatrix4fv(uniModel, false, modelMatrixBuffer);
+            // glUniformMatrix4fv(uniModel, false, modelMatrixBuffer);
 
-            glClear(GL_COLOR_BUFFER_BIT);
+            // Start rendering
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
             glDrawArrays(GL_TRIANGLES, 0, 6);
+
+            // glUniformMatrix4fv(uniProjection, false, hudProjectionBuffer);
+            // glDepthMask(false);
+            // glDisable(GL_DEPTH_TEST);
+            // Draw HUD
+            glUniformMatrix4fv(uniProjection, false, mainProjectionBuffer);
+            glDepthMask(true);
+            glEnable(GL_DEPTH_TEST);
+
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
@@ -289,14 +313,10 @@ public class App {
     private void resizeView(int width, int height) {
         screenSize = new Vector2i(width, height);
         glViewport(0, 0, width, height);
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            FloatBuffer matrixBuffer = stack.mallocFloat(16);
-            int uniProjection = glGetUniformLocation(shaderProgram, "projection");
-            float ratio = (float)width / (float)height;
-            Matrix4f projection = new Matrix4f().setPerspective((float)Math.toRadians(80), ratio, 0, 1000);
-            projection.get(matrixBuffer);
-            glUniformMatrix4fv(uniProjection, false, matrixBuffer);
-        }
+        float ratio = (float)width / (float)height;
+        Matrix4f projection = new Matrix4f();
+        projection.setPerspective((float)Math.toRadians(80), ratio, 0.01f, 1000).get(mainProjectionBuffer);
+        projection.setOrtho2D(0, 1, 0, 1).get(hudProjectionBuffer);
     }
 
     private Vector2d getMousePos() {

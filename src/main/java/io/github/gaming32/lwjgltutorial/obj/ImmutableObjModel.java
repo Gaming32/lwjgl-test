@@ -1,4 +1,4 @@
-package io.github.gaming32.lwjgltutorial;
+package io.github.gaming32.lwjgltutorial.obj;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,21 +14,24 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-public final class ImmutableObjModel {
-    public static final class Vertex {
-        private final float x, y, z, r, g, b;
+public final class ImmutableObjModel implements FloatBufferable {
+    public static final class Vertex implements FloatBufferable {
+        private final float x, y, z;
+        private final Color color;
 
-        public Vertex(float x, float y, float z, float r, float g, float b) {
+        public Vertex(float x, float y, float z, Color color) {
             this.x = x;
             this.y = y;
             this.z = z;
-            this.r = r;
-            this.g = g;
-            this.b = b;
+            this.color = color;
+        }
+
+        public Vertex(float x, float y, float z, float r, float g, float b) {
+            this(x, y, z, new Color(r, g, b));
         }
 
         public Vertex(float x, float y, float z) {
-            this(x, y, z, 1, 1, 1);
+            this(x, y, z, Color.WHITE);
         }
 
         public float getX() {
@@ -43,29 +46,24 @@ public final class ImmutableObjModel {
             return z;
         }
 
-        public float getR() {
-            return r;
+        public Color getColor() {
+            return color;
         }
 
-        public float getG() {
-            return g;
-        }
-
-        public float getB() {
-            return b;
-        }
-
+        @Override
         public FloatBuffer getInto(FloatBuffer buffer) {
-            return buffer.put(x).put(y).put(z).put(r).put(g).put(b);
+            buffer.put(x).put(y).put(z);
+            color.getInto(buffer);
+            return buffer;
         }
 
         @Override
         public String toString() {
-            return "Vertex[x=" + x + ", y=" + y + ", z=" + z + ", r=" + r + ", g=" + g + ", b=" + b + "]";
+            return "Vertex[x=" + x + ", y=" + y + ", z=" + z + ", color=" + color + "]";
         }
     }
 
-    public static final class Triangle {
+    public static final class Triangle implements FloatBufferable {
         private final Vertex v1, v2, v3;
 
         public Triangle(Vertex v1, Vertex v2, Vertex v3) {
@@ -94,6 +92,7 @@ public final class ImmutableObjModel {
             return v3;
         }
 
+        @Override
         public FloatBuffer getInto(FloatBuffer buffer) {
             v1.getInto(buffer);
             v2.getInto(buffer);
@@ -104,12 +103,6 @@ public final class ImmutableObjModel {
         @Override
         public String toString() {
             return "Triangle[v1=" + v1 + ", v2=" + v2 + ", v3=" + v3 + "]";
-        }
-    }
-
-    public static class ObjFormatException extends RuntimeException {
-        public ObjFormatException(String s) {
-            super(s);
         }
     }
 
@@ -128,11 +121,15 @@ public final class ImmutableObjModel {
     }
 
     public static ImmutableObjModel parse(String file) throws IOException {
-        return parse(new FileReader(file));
+        try (FileReader reader = new FileReader(file)) {
+            return parse(reader);
+        }
     }
 
     public static ImmutableObjModel parse(File file) throws IOException {
-        return parse(new FileReader(file));
+        try (FileReader reader = new FileReader(file)) {
+            return parse(reader);
+        }
     }
 
     public static ImmutableObjModel parse(InputStream input) throws IOException {
@@ -140,6 +137,10 @@ public final class ImmutableObjModel {
     }
 
     public static ImmutableObjModel parse(Reader input) throws IOException {
+        return parse(input, new ObjParseOptions());
+    }
+
+    public static ImmutableObjModel parse(Reader input, ObjParseOptions options) throws IOException {
         BufferedReader reader = input instanceof BufferedReader ? (BufferedReader)input : new BufferedReader(input);
         List<Vertex> vertices = new ArrayList<>();
         List<Triangle> tris = new ArrayList<>();
@@ -202,6 +203,8 @@ public final class ImmutableObjModel {
                     tris.add(tri);
                     break;
                 }
+                case "g":
+                    break;
                 default:
                     throw new ObjFormatException("Unknown or unsupported command " + command);
             }
@@ -222,6 +225,7 @@ public final class ImmutableObjModel {
         return tris.length * 6;
     }
 
+    @Override
     public FloatBuffer getInto(FloatBuffer buffer) {
         for (Triangle tri : tris) {
             tri.getInto(buffer);
