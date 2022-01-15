@@ -2,8 +2,11 @@ package io.github.gaming32.lwjgltutorial;
 
 import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MAJOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MINOR;
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR;
+import static org.lwjgl.glfw.GLFW.GLFW_CURSOR_DISABLED;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_W;
 import static org.lwjgl.glfw.GLFW.GLFW_OPENGL_CORE_PROFILE;
@@ -20,8 +23,11 @@ import static org.lwjgl.glfw.GLFW.glfwGetTime;
 import static org.lwjgl.glfw.GLFW.glfwInit;
 import static org.lwjgl.glfw.GLFW.glfwMakeContextCurrent;
 import static org.lwjgl.glfw.GLFW.glfwPollEvents;
+import static org.lwjgl.glfw.GLFW.glfwSetCursorPos;
 import static org.lwjgl.glfw.GLFW.glfwSetErrorCallback;
+import static org.lwjgl.glfw.GLFW.glfwSetInputMode;
 import static org.lwjgl.glfw.GLFW.glfwSetKeyCallback;
+import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
 import static org.lwjgl.glfw.GLFW.glfwSetWindowSizeCallback;
 import static org.lwjgl.glfw.GLFW.glfwSwapBuffers;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
@@ -75,6 +81,7 @@ import java.nio.FloatBuffer;
 import org.joml.Matrix4f;
 import org.joml.Vector2d;
 import org.joml.Vector2f;
+import org.joml.Vector2i;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
@@ -95,6 +102,7 @@ public class App {
 
     private long window;
     private int shaderProgram;
+    private Vector2i screenSize;
     private GLFWErrorCallback errorCallback = GLFWErrorCallback.createPrint(System.err);
     private final ImmutableObjModel model;
 
@@ -194,7 +202,7 @@ public class App {
         Vector2f rotation = new Vector2f();
 
         Vector3f velocity = new Vector3f();
-        Vector3f position = new Vector3f(0, 0, -5);
+        Vector3f position = new Vector3f(0, -1.8f, -5);
         glfwSetKeyCallback(window, (window2, key, scancode, action, mods) -> {
             if (action == GLFW_PRESS) {
                 if (key == GLFW_KEY_W) {
@@ -211,9 +219,13 @@ public class App {
                     velocity.z = 0;
                 } else if (key == GLFW_KEY_A || key == GLFW_KEY_D) {
                     velocity.x = 0;
+                } else if (key == GLFW_KEY_ESCAPE) {
+                    glfwSetWindowShouldClose(window, true);
                 }
             }
         });
+
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
         double lastTime = glfwGetTime();
         while (!glfwWindowShouldClose(window)) {
@@ -222,9 +234,9 @@ public class App {
             lastTime = time;
             // System.out.print(time + "\r");
 
-            Vector2d newMousePos = getMousePos();
-            Vector2d relMousePos = new Vector2d().set(newMousePos).sub(mousePos);
-            mousePos = newMousePos;
+            Vector2d relMousePos = getMousePos().sub(mousePos);
+            glfwSetCursorPos(window, screenSize.x / 2, screenSize.y / 2);
+            mousePos.set(screenSize.x / 2, screenSize.y / 2);
 
             rotation.x += (float)(relMousePos.y * delta * TURN_SPEED);
             rotation.y += (float)(relMousePos.x * delta * TURN_SPEED);
@@ -275,6 +287,7 @@ public class App {
     }
 
     private void resizeView(int width, int height) {
+        screenSize = new Vector2i(width, height);
         glViewport(0, 0, width, height);
         try (MemoryStack stack = MemoryStack.stackPush()) {
             FloatBuffer matrixBuffer = stack.mallocFloat(16);
